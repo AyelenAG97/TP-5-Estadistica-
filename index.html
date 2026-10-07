@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>TP5 - Relación entre variables</title>
+        <link rel="stylesheet" href="./assets/variable.css" />
+        <link rel="stylesheet" href="./assets/styles.css" />
+        <!-- Chart.js (versión 4 fija) para dibujar los gráficos de dispersión -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    </head>
+    <body>
+        <header>
+            <h1>Relación entre variables</h1>
+            <p>Estadística y Probabilidades — TP Nro 5</p>
+        </header>
+
+        <main>
+            <!-- Botón para volver a consultar la API -->
+            <section class="controls">
+                <span>Coeficiente de correlación de Pearson entre variables meteorológicas</span>
+                <button id="btnCargar">Recargar datos</button>
+            </section>
+
+            <!-- Alertas de texto generadas por main.js (carga / errores) -->
+            <section id="alertas" class="alertas" aria-live="polite"></section>
+
+            <!-- Conclusión: par con la mayor correlación -->
+            <section id="conclusion" class="conclusion" hidden></section>
+
+            <!-- Una card por cada par de variables (las genera main.js) -->
+            <section id="cards" class="cards"></section>
+
+            <!-- Tabla con los datos crudos que devolvió la API -->
+            <section class="datos">
+                <h2>Datos obtenidos de la API</h2>
+                <table id="tablaDatos">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Presión (hPa)</th>
+                            <th>Temperatura (°C)</th>
+                            <th>Humedad (%)</th>
+                            <th>Viento (km/h)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </section>
+        </main>
+        <footer class="footer">
+            <p>© 2026 by Matias Rosa, Camila Larsen, Ayelen Aguero & Matias Nerli</p>
+        </footer>
+
+        <script src="main.js"></script>
+    </body>
+</html>

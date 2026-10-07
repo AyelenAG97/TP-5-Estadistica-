@@ -1,0 +1,7 @@
+@import url("https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Roboto:wght@400;500;700&display=swap");
+
+:root {
+    /* sans-serif sin comillas: es la familia genérica de respaldo */
+    --font-primary: "Roboto", sans-serif;
+    --font-secondary: "Lato", sans-serif;
+}

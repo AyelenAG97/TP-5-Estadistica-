@@ -6,11 +6,14 @@
  *      presión, temperatura, humedad y velocidad del viento.
  *   2. Calcula el coeficiente de correlación de Pearson (r) para los
  *      6 pares posibles de variables.
- *   3. Crea una card por par con el valor de r, un gráfico de dispersión
- *      (Chart.js) con su recta de regresión y una descripción del resultado.
- *   4. Determina qué par tiene la mayor correlación (en valor absoluto)
+ *   3. Dibuja un gráfico de barras divergente (de −1 a +1) con el r de
+ *      los 6 pares, para compararlos de un vistazo.
+ *   4. Crea un panel por par con el valor de r, un gráfico de dispersión
+ *      (Chart.js) dividido en cuadrantes por los promedios x̄ e ȳ, la recta
+ *      de regresión, el conteo de puntos por cuadrante y una descripción.
+ *   5. Determina qué par tiene la mayor correlación (en valor absoluto)
  *      y lo muestra como conclusión.
- *   5. Llena una tabla con los datos crudos de la API.
+ *   6. Llena una tabla con los datos crudos de la API.
  */
 
 const API_URL = "https://apidemo.geoeducacion.com.ar/api/testing/pearson/1";
@@ -35,7 +38,7 @@ const PARES = [
 
 /*
  * Interpretación física de cada par, según el signo de r.
- * Se usa en la descripción de cada card y en la conclusión.
+ * Se usa en la descripción de cada panel y en la conclusión.
  */
 const INTERPRETACIONES = {
     "presion-temperatura": {
@@ -64,6 +67,28 @@ const INTERPRETACIONES = {
     },
 };
 
+/*
+ * Colores del gráfico. Son los mismos que define variable.css:
+ * verde azulado = cuadrantes I y III (aporte positivo a r),
+ * ciruela = cuadrantes II y IV (aporte negativo a r).
+ */
+const COLORES = {
+    tinta: "#1f2a44",
+    tintaSuave: "#52607a",
+    grilla: "#dbe3ea",
+    positivo: "#1f7a8c",
+    positivoFondo: "rgba(31, 122, 140, 0.10)",
+    negativo: "#9c3d6b",
+    negativoFondo: "rgba(156, 61, 107, 0.10)",
+};
+
+// Tipografía y color por defecto de todos los gráficos
+Chart.defaults.font.family = '"Instrument Sans", sans-serif';
+Chart.defaults.color = COLORES.tintaSuave;
+
+// Si el usuario pidió reducir el movimiento, los gráficos aparecen sin animación
+const sinAnimacion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 // Guarda las instancias de los gráficos para destruirlas al recargar
 let graficos = [];
 
@@ -81,8 +106,8 @@ document.addEventListener("DOMContentLoaded", cargarDatos);
 /**
  * Pide los datos a la API y dispara los cálculos y el dibujo.
  * Mientras espera la respuesta se desactiva el botón, así un doble clic
- * no lanza dos pedidos a la vez (cada uno dibujaría sus propias cards
- * y quedarían duplicadas).
+ * no lanza dos pedidos a la vez (cada uno dibujaría sus propios paneles
+ * y quedarían duplicados).
  */
 async function cargarDatos() {
     const boton = document.getElementById("btnCargar");
@@ -118,8 +143,9 @@ async function cargarDatos() {
         });
 
         document.getElementById("alertas").innerHTML = "";
-        resultados.forEach(crearCard);
+        dibujarEspectro(resultados);
         mostrarConclusion(resultados);
+        resultados.forEach(crearCard);
         llenarTabla(valores);
     } catch (error) {
         console.error(error);
@@ -195,8 +221,52 @@ function regresion(x, y) {
 }
 
 /**
+ * Cuadrantes: las rectas x = x̄ e y = ȳ dividen el gráfico en cuatro.
+ *
+ *          II  |  I          I:   x > x̄  e  y > ȳ   → (xi − x̄)(yi − ȳ) > 0
+ *        ------+------       II:  x < x̄  e  y > ȳ   → producto < 0
+ *          III |  IV         III: x < x̄  e  y < ȳ   → producto > 0
+ *                            IV:  x > x̄  e  y < ȳ   → producto < 0
+ *
+ * El numerador de Pearson es la suma de esos productos. Por eso, si la
+ * mayoría de los puntos (y los más alejados) caen en I y III, r es positivo;
+ * si caen en II y IV, r es negativo; y si se reparten parejo, r queda cerca de 0.
+ *
+ * Devuelve el promedio de cada variable, el cuadrante de cada punto, cuántos
+ * puntos hay en cada cuadrante y cuánto suman los productos positivos y negativos.
+ */
+function cuadrantes(x, y) {
+    const mx = media(x);
+    const my = media(y);
+    const conteo = { I: 0, II: 0, III: 0, IV: 0 };
+    let sumaPositiva = 0; // Σ de productos > 0 (cuadrantes I y III)
+    let sumaNegativa = 0; // Σ de |productos| < 0 (cuadrantes II y IV)
+
+    const porPunto = x.map((xi, i) => {
+        const dx = xi - mx;
+        const dy = y[i] - my;
+        const producto = dx * dy;
+
+        if (producto > 0) sumaPositiva += producto;
+        else sumaNegativa += -producto;
+
+        // Un punto justo sobre un promedio (dx o dy = 0) aporta 0 y no se cuenta
+        let cuadrante = null;
+        if (dx > 0 && dy > 0) cuadrante = "I";
+        else if (dx < 0 && dy > 0) cuadrante = "II";
+        else if (dx < 0 && dy < 0) cuadrante = "III";
+        else if (dx > 0 && dy < 0) cuadrante = "IV";
+
+        if (cuadrante) conteo[cuadrante]++;
+        return cuadrante;
+    });
+
+    return { mx, my, porPunto, conteo, sumaPositiva, sumaNegativa };
+}
+
+/**
  * Clasifica la fuerza de la correlación según el valor absoluto de r.
- * Devuelve el texto y la clase CSS para el color de la card.
+ * Devuelve el texto de la fuerza (y una clase con el mismo criterio).
  */
 function clasificar(r) {
     const abs = Math.abs(r);
@@ -215,13 +285,13 @@ function describir(varX, varY, r) {
     const signo = r >= 0 ? "positiva" : "negativa";
 
     if (Math.abs(r) < 0.2) {
-        return `r = ${r.toFixed(4)}: no hay una relación lineal significativa entre ${nombreX.toLowerCase()} y ${nombreY.toLowerCase()}. Los puntos aparecen dispersos sin una tendencia clara.`;
+        return `r = ${formatoR(r)}: no hay una relación lineal significativa entre ${nombreX.toLowerCase()} y ${nombreY.toLowerCase()}. Los puntos aparecen dispersos sin una tendencia clara.`;
     }
 
     const interpretacion = INTERPRETACIONES[`${varX}-${varY}`][signo];
     const direccion = r >= 0 ? "ambas variables tienden a aumentar juntas" : `cuando ${nombreX.toLowerCase()} aumenta, ${nombreY.toLowerCase()} tiende a disminuir`;
 
-    let texto = `Correlación ${signo} ${fuerza} (r = ${r.toFixed(4)}): ${direccion}. En estos datos, ${interpretacion}`;
+    let texto = `Correlación ${signo} ${fuerza} (r = ${formatoR(r)}): ${direccion}. En estos datos, ${interpretacion}`;
 
     if (Math.abs(r) < 0.7) {
         texto += " Sin embargo, la relación no es lo suficientemente fuerte como para predecir una variable a partir de la otra.";
@@ -229,36 +299,207 @@ function describir(varX, varY, r) {
     return texto;
 }
 
+
+/** Id del panel de un par, para poder enlazarlo desde el gráfico de barras. */
+function idPanel(varX, varY) {
+    return `par-${varX}-${varY}`;
+}
+
+/** "positiva" o "negativa": se usa como clase CSS para elegir el color. */
+function signo(r) {
+    return r >= 0 ? "positiva" : "negativa";
+}
+
+// ---------------------------------------------------------------------------
+// Plugin de Chart.js: división en cuadrantes
+// ---------------------------------------------------------------------------
+
+/*
+ * Chart.js permite agregar "plugins" que dibujan sobre el canvas en distintos
+ * momentos. Este dibuja, ANTES que los puntos (beforeDatasetsDraw):
+ *   1. el fondo de cada cuadrante (I y III verde azulado, II y IV ciruela);
+ *   2. las líneas punteadas de x̄ e ȳ que forman la división;
+ *   3. el número romano de cada cuadrante en su esquina.
+ * Los promedios le llegan por options.plugins.cuadrantes = { mediaX, mediaY }.
+ */
+const pluginCuadrantes = {
+    id: "cuadrantes",
+    beforeDatasetsDraw(chart, args, opciones) {
+        const { ctx, chartArea, scales } = chart;
+        const { left, right, top, bottom } = chartArea;
+
+        // Posición en píxeles de los promedios dentro del canvas
+        const px = scales.x.getPixelForValue(opciones.mediaX);
+        const py = scales.y.getPixelForValue(opciones.mediaY);
+
+        ctx.save();
+
+        // 1. Fondos. En el canvas la Y crece hacia abajo: "top" es el borde superior.
+        ctx.fillStyle = COLORES.positivoFondo;
+        ctx.fillRect(px, top, right - px, py - top); // I   (arriba a la derecha)
+        ctx.fillRect(left, py, px - left, bottom - py); // III (abajo a la izquierda)
+        ctx.fillStyle = COLORES.negativoFondo;
+        ctx.fillRect(left, top, px - left, py - top); // II  (arriba a la izquierda)
+        ctx.fillRect(px, py, right - px, bottom - py); // IV  (abajo a la derecha)
+
+        // 2. Líneas de los promedios
+        ctx.strokeStyle = COLORES.tinta;
+        ctx.lineWidth = 1.25;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        ctx.moveTo(px, top);
+        ctx.lineTo(px, bottom);
+        ctx.moveTo(left, py);
+        ctx.lineTo(right, py);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Nombre de cada línea, en el borde del gráfico
+        ctx.font = '600 11px "Instrument Sans", sans-serif';
+        ctx.fillStyle = COLORES.tinta;
+        ctx.textBaseline = "bottom";
+        promedioConBarra(ctx, "x", px + 5, bottom - 4, "left");
+        promedioConBarra(ctx, "y", right - 5, py - 3, "right");
+
+        // 3. Número de cada cuadrante en su esquina exterior
+        ctx.font = '700 15px "Bricolage Grotesque", sans-serif';
+        const margen = 8;
+        const etiqueta = (texto, color, x, y, alineacion, base) => {
+            ctx.fillStyle = color;
+            ctx.textAlign = alineacion;
+            ctx.textBaseline = base;
+            ctx.fillText(texto, x, y);
+        };
+        etiqueta("I", COLORES.positivo, right - margen, top + margen, "right", "top");
+        etiqueta("II", COLORES.negativo, left + margen, top + margen, "left", "top");
+        etiqueta("III", COLORES.positivo, left + margen, bottom - margen, "left", "bottom");
+        etiqueta("IV", COLORES.negativo, right - margen, bottom - margen, "right", "bottom");
+
+        ctx.restore();
+    },
+};
+
+/**
+ * Escribe "x̄" o "ȳ" en el canvas: la letra y una rayita encima.
+ * Se dibuja a mano porque muchas fuentes no traen el carácter combinado.
+ */
+function promedioConBarra(ctx, letra, x, y, alineacion) {
+    ctx.textAlign = alineacion;
+    ctx.fillText(letra, x, y);
+    const ancho = ctx.measureText(letra).width;
+    const inicio = alineacion === "right" ? x - ancho : x;
+    ctx.fillRect(inicio, y - 11, ancho, 1.25);
+}
+
 // ---------------------------------------------------------------------------
 // Salida en pantalla (DOM)
 // ---------------------------------------------------------------------------
 
-/** Crea la card de un par: título, valor de r, gráfico y descripción. */
-function crearCard(resultado) {
-    const { varX, varY, x, y, r } = resultado;
-    const { fuerza, clase } = clasificar(r);
-    const infoX = VARIABLES[varX];
-    const infoY = VARIABLES[varY];
+/**
+ * Gráfico de barras divergente con el r de los 6 pares.
+ * Cada fila tiene una pista que va de −1 (izquierda) a +1 (derecha) con el 0
+ * en el centro. La barra arranca en el 0 y llega hasta r:
+ *   - posición del 0 en la pista: 50 %
+ *   - largo de la barra: |r| · 50 %
+ *   - si r > 0 la barra empieza en 50 %; si r < 0 empieza en 50 % − largo.
+ * Las filas se ordenan de mayor a menor r y cada una enlaza a su panel.
+ */
+function dibujarEspectro(resultados) {
+    const lista = document.getElementById("espectro");
+    lista.innerHTML = "";
 
-    const card = document.createElement("article");
-    card.className = `card card-${clase}`;
-    card.innerHTML = `
-        <h2>${infoX.nombre} y ${infoY.nombre}</h2>
-        <div class="valor-r">
-            <span class="r">r = ${r.toFixed(4)}</span>
-            <span class="badge badge-${clase}">${r >= 0 ? "Positiva" : "Negativa"} ${fuerza}</span>
-        </div>
-        <div class="chart-container"><canvas></canvas></div>
-        <p class="descripcion">${describir(varX, varY, r)}</p>
-    `;
-    document.getElementById("cards").appendChild(card);
+    [...resultados]
+        .sort((p, q) => q.r - p.r)
+        .forEach(({ varX, varY, r }) => {
+            const largo = Math.abs(r) * 50;
+            const inicio = r >= 0 ? 50 : 50 - largo;
+            const nombre = `${VARIABLES[varX].nombre} y ${VARIABLES[varY].nombre}`;
 
-    dibujarDispersion(card.querySelector("canvas"), x, y, infoX, infoY, clase);
+            const li = document.createElement("li");
+            li.innerHTML = `
+                <a href="#${idPanel(varX, varY)}" aria-label="${nombre}: r = ${formatoR(r)}">
+                    <span class="espectro-nombre">${nombre}</span>
+                    <span class="espectro-pista">
+                        <span class="espectro-barra ${signo(r)}" style="left: ${inicio}%; width: ${largo}%"></span>
+                    </span>
+                    <span class="espectro-valor ${signo(r)}">${formatoR(r)}</span>
+                </a>
+            `;
+            lista.appendChild(li);
+        });
 }
 
-/** Dibuja el gráfico de dispersión con la recta de regresión. */
-function dibujarDispersion(canvas, x, y, infoX, infoY, clase) {
+/** r con signo explícito y coma decimal: +0,7043 / −0,7368 */
+function formatoR(r) {
+    const texto = Math.abs(r).toFixed(4).replace(".", ",");
+    return (r >= 0 ? "+" : "−") + texto;
+}
+
+/**
+ * Crea el panel de un par: gráfico a la izquierda y, a la derecha, el valor
+ * de r, el conteo de puntos por cuadrante, el aporte de cada grupo de
+ * cuadrantes al numerador de Pearson y la descripción.
+ */
+function crearCard(resultado) {
+    const { varX, varY, x, y, r } = resultado;
+    const { fuerza } = clasificar(r);
+    const infoX = VARIABLES[varX];
+    const infoY = VARIABLES[varY];
+    const cuad = cuadrantes(x, y);
+
+    // Porcentaje del "tira y afloje" entre productos positivos y negativos
+    const total = cuad.sumaPositiva + cuad.sumaNegativa;
+    const pctPos = total === 0 ? 50 : (cuad.sumaPositiva / total) * 100;
+    const pctNeg = 100 - pctPos;
+
+    const panel = document.createElement("article");
+    panel.className = "panel";
+    panel.id = idPanel(varX, varY);
+    panel.innerHTML = `
+        <div class="chart-container">
+            <canvas role="img" aria-label="Dispersión de ${infoX.nombre} y ${infoY.nombre} dividida en cuadrantes"></canvas>
+        </div>
+        <div class="panel-lectura">
+            <h3>${infoX.nombre} y ${infoY.nombre}</h3>
+            <div class="panel-r">
+                <span class="r ${signo(r)}">r = ${formatoR(r)}</span>
+                <span class="fuerza">${r >= 0 ? "Positiva" : "Negativa"} ${fuerza}</span>
+            </div>
+            <div class="conteo" aria-label="Puntos por cuadrante">
+                <div class="neg"><strong>${cuad.conteo.II}</strong>en II</div>
+                <div class="pos"><strong>${cuad.conteo.I}</strong>en I</div>
+                <div class="pos"><strong>${cuad.conteo.III}</strong>en III</div>
+                <div class="neg"><strong>${cuad.conteo.IV}</strong>en IV</div>
+            </div>
+            <div>
+                <p class="aporte-titulo">Peso de cada lado en Σ (x<sub>i</sub> − <span class="media">x</span>)(y<sub>i</sub> − <span class="media">y</span>)</p>
+                <div class="aporte-barra" aria-hidden="true">
+                    <span class="pos" style="width: ${pctPos}%"></span>
+                    <span class="neg" style="width: ${pctNeg}%"></span>
+                </div>
+                <div class="aporte-leyenda">
+                    <span class="pos">I y III: ${pctPos.toFixed(0)} %</span>
+                    <span class="neg">II y IV: ${pctNeg.toFixed(0)} %</span>
+                </div>
+            </div>
+            <p class="descripcion">${describir(varX, varY, r)}</p>
+        </div>
+    `;
+    document.getElementById("cards").appendChild(panel);
+
+    dibujarDispersion(panel.querySelector("canvas"), x, y, infoX, infoY, cuad);
+}
+
+/** Dibuja el gráfico de dispersión con cuadrantes y recta de regresión. */
+function dibujarDispersion(canvas, x, y, infoX, infoY, cuad) {
     const puntos = x.map((xi, i) => ({ x: xi, y: y[i] }));
+
+    // Cada punto toma el color de su cuadrante
+    const coloresPuntos = cuad.porPunto.map((c) => {
+        if (c === "I" || c === "III") return COLORES.positivo;
+        if (c === "II" || c === "IV") return COLORES.negativo;
+        return COLORES.tinta; // justo sobre un promedio
+    });
 
     // La recta se dibuja con dos puntos: en el mínimo y en el máximo de X
     const { a, b } = regresion(x, y);
@@ -269,8 +510,6 @@ function dibujarDispersion(canvas, x, y, infoX, infoY, clase) {
         { x: xMax, y: a + b * xMax },
     ];
 
-    const colorRecta = { fuerte: "#e15759", moderada: "#f28e2b", debil: "#9c9c9c" }[clase];
-
     const grafico = new Chart(canvas, {
         type: "scatter",
         data: {
@@ -278,35 +517,57 @@ function dibujarDispersion(canvas, x, y, infoX, infoY, clase) {
                 {
                     label: "Mediciones",
                     data: puntos,
-                    backgroundColor: "#4e79a7",
-                    pointRadius: 5,
-                    pointHoverRadius: 7,
+                    backgroundColor: coloresPuntos,
+                    borderColor: "#f7fafc",
+                    borderWidth: 1.5,
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
                 },
                 {
                     label: "Recta de regresión",
                     data: recta,
                     type: "line",
-                    borderColor: colorRecta,
-                    borderDash: [6, 4],
+                    borderColor: COLORES.tinta,
                     borderWidth: 2,
                     pointRadius: 0,
+                    pointHoverRadius: 0,
                     fill: false,
                 },
             ],
         },
+        plugins: [pluginCuadrantes],
         options: {
             maintainAspectRatio: false,
+            animation: sinAnimacion ? false : { duration: 500 },
             plugins: {
-                legend: { labels: { boxWidth: 14, font: { size: 11 } } },
+                cuadrantes: { mediaX: cuad.mx, mediaY: cuad.my },
+                // Sin leyenda: los colores se explican en "Cómo leer los cuadrantes"
+                legend: { display: false },
                 tooltip: {
+                    backgroundColor: COLORES.tinta,
+                    filter: (item) => item.datasetIndex === 0, // tooltip solo en los puntos
                     callbacks: {
-                        label: (ctx) => `${infoX.nombre}: ${ctx.parsed.x.toFixed(2)} ${infoX.unidad} | ${infoY.nombre}: ${ctx.parsed.y.toFixed(2)} ${infoY.unidad}`,
+                        title: (items) => `Medición ${items[0].dataIndex + 1} · cuadrante ${cuad.porPunto[items[0].dataIndex] ?? "—"}`,
+                        label: (ctx) => [
+                            `${infoX.nombre}: ${ctx.parsed.x.toFixed(2)} ${infoX.unidad}`,
+                            `${infoY.nombre}: ${ctx.parsed.y.toFixed(2)} ${infoY.unidad}`,
+                        ],
                     },
                 },
             },
             scales: {
-                x: { title: { display: true, text: `${infoX.nombre} (${infoX.unidad})` } },
-                y: { title: { display: true, text: `${infoY.nombre} (${infoY.unidad})` } },
+                x: {
+                    title: { display: true, text: `${infoX.nombre} (${infoX.unidad})`, color: COLORES.tinta },
+                    grid: { color: COLORES.grilla },
+                    border: { display: false },
+                    grace: "5%",
+                },
+                y: {
+                    title: { display: true, text: `${infoY.nombre} (${infoY.unidad})`, color: COLORES.tinta },
+                    grid: { color: COLORES.grilla },
+                    border: { display: false },
+                    grace: "8%",
+                },
             },
         },
     });
@@ -320,27 +581,20 @@ function mostrarConclusion(resultados) {
     const ordenados = [...resultados].sort((p, q) => Math.abs(q.r) - Math.abs(p.r));
     const mayor = ordenados[0];
     const { fuerza } = clasificar(mayor.r);
-    const signo = mayor.r >= 0 ? "positiva" : "negativa";
     const nombreX = VARIABLES[mayor.varX].nombre;
     const nombreY = VARIABLES[mayor.varY].nombre;
 
-    const ranking = ordenados.map((p) => `<li>${VARIABLES[p.varX].nombre} y ${VARIABLES[p.varY].nombre}: <strong>${p.r.toFixed(4)}</strong></li>`).join("");
-
     const cont = document.getElementById("conclusion");
     cont.innerHTML = `
-        <h2>Conclusión</h2>
+        <h2>La relación más fuerte: ${nombreX} y ${nombreY}</h2>
         <p>
-            El par con mayor correlación es <strong>${nombreX} y ${nombreY}</strong>,
-            con una correlación ${signo} ${fuerza} (r = ${mayor.r.toFixed(4)}).
-            Esto implica que ${INTERPRETACIONES[`${mayor.varX}-${mayor.varY}`][signo]}
+            Es una correlación ${signo(mayor.r)} ${fuerza} (r = ${formatoR(mayor.r)}).
+            Esto implica que ${INTERPRETACIONES[`${mayor.varX}-${mayor.varY}`][signo(mayor.r)]}
         </p>
         <p>
-            Hay que tener en cuenta que la muestra es chica (${mayor.x.length} mediciones) y que
-            correlación no implica causalidad: ambas variables pueden estar influidas por un
-            tercer factor, como el tipo de sistema de presión dominante.
+            La muestra es chica (${mayor.x.length} mediciones) y correlación no implica causalidad:
+            ambas variables pueden depender de un tercer factor, como el sistema de presión dominante.
         </p>
-        <h3>Ranking por fuerza de la correlación (|r|)</h3>
-        <ol>${ranking}</ol>
     `;
     cont.hidden = false;
 }
@@ -361,11 +615,12 @@ function llenarTabla(valores) {
     });
 }
 
-/** Borra cards, gráficos, conclusión y tabla antes de una nueva carga. */
+/** Borra paneles, gráficos, barras, conclusión y tabla antes de una nueva carga. */
 function limpiarPantalla() {
     graficos.forEach((g) => g.destroy());
     graficos = [];
     document.getElementById("cards").innerHTML = "";
+    document.getElementById("espectro").innerHTML = "";
     document.getElementById("alertas").innerHTML = "";
     document.querySelector("#tablaDatos tbody").innerHTML = "";
     document.getElementById("conclusion").hidden = true;

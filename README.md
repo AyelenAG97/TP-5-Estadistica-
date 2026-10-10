@@ -3,7 +3,7 @@
 Trabajo Práctico Nº 5 de **Estadística y Probabilidades**
 Tecnicatura Superior en Desarrollo de Software – Instituto IDRA, Mar del Plata (2026)
 
-Página web que consume una API con JavaScript y calcula el **coeficiente de correlación de Pearson** entre todas las combinaciones de cuatro variables meteorológicas. Cada par se muestra en una card con su valor de _r_, un **gráfico de dispersión** y una breve descripción del resultado. Al final se indica qué par tiene la mayor correlación y qué podría implicar.
+Página web que consume una API con JavaScript y calcula el **coeficiente de correlación de Pearson** entre todas las combinaciones de cuatro variables meteorológicas. Cada par se muestra en un panel con su valor de _r_, un **gráfico de dispersión dividido en cuadrantes** y una breve descripción del resultado. Al final se indica qué par tiene la mayor correlación y qué podría implicar.
 
 ---
 
@@ -26,12 +26,14 @@ Página web que consume una API con JavaScript y calcula el **coeficiente de cor
     - Temperatura y Humedad
     - Temperatura y Velocidad del viento
     - Humedad y Velocidad del viento
-- Una card por par con:
-    - el valor de _r_ y una etiqueta con su dirección y fuerza;
-    - gráfico de dispersión con Chart.js y la recta de regresión;
-    - descripción automática que analiza el valor obtenido.
-- El color de cada card indica la fuerza: **rojo** fuerte, **naranja** moderada, **gris** débil.
-- Conclusión con el par de mayor correlación y un ranking de los 6 pares por |r|.
+- **Gráfico de barras divergente** de −1 a +1 con el _r_ de los 6 pares, para compararlos de un vistazo. Cada barra lleva al gráfico de su par.
+- Un panel por par con:
+    - gráfico de dispersión con Chart.js **dividido en cuadrantes** por los promedios x̄ e ȳ, con los puntos coloreados según su cuadrante;
+    - recta de regresión;
+    - valor de _r_ con su dirección y fuerza;
+    - cantidad de puntos en cada cuadrante y cuánto pesa cada grupo (I y III contra II y IV) en el numerador de Pearson;
+    - descripción automática del resultado.
+- Conclusión con el par de mayor correlación.
 - Tabla con los datos crudos de la API.
 - Manejo de errores si la API no responde o devuelve datos inválidos.
 
@@ -67,6 +69,14 @@ a = ȳ − b·x̄
 y = a + b·x
 ```
 
+División en cuadrantes: las rectas x = x̄ e y = ȳ dividen cada gráfico en cuatro. En los cuadrantes **I y III** el producto (xi − x̄)(yi − ȳ) es positivo y empuja _r_ hacia +1; en los cuadrantes **II y IV** es negativo y lo empuja hacia −1.
+
+```text
+   II (−) | I (+)
+  --------+--------
+  III (+) | IV (−)
+```
+
 Criterio usado para clasificar la fuerza de la correlación:
 
 | \|r\|        | Correlación      |
@@ -97,9 +107,9 @@ Criterio usado para clasificar la fuerza de la correlación:
 ## Tecnologías
 
 - **HTML5**: estructura de la página.
-- **CSS3**: diseño de las cards, la conclusión y la tabla, con variables CSS, grid y diseño adaptable a celulares.
+- **CSS3**: variables CSS para la paleta y las tipografías (Bricolage Grotesque e Instrument Sans), CSS Grid y diseño adaptable a celulares.
 - **JavaScript**: `fetch` con `async/await` para consumir la API, cálculos estadísticos y manipulación del DOM.
-- **[Chart.js 4](https://www.chartjs.org/)**: gráficos de dispersión.
+- **[Chart.js 4](https://www.chartjs.org/)**: gráficos de dispersión, con un plugin propio que dibuja los cuadrantes.
 
 ---
 
@@ -107,12 +117,12 @@ Criterio usado para clasificar la fuerza de la correlación:
 
 ```text
 ├── index.html          → Estructura de la página
-├── main.js             → Consumo de la API, cálculo de Pearson y dibujo de las cards
+├── main.js             → Consumo de la API, cálculo de Pearson, cuadrantes y dibujo de los gráficos
 ├── README.md           → Este archivo
 ├── EXPLICACION.md      → Explicación detallada del código y de las fórmulas
 └── assets/
     ├── styles.css      → Estilos
-    └── variable.css    → Variables CSS (tipografías)
+    └── variable.css    → Variables CSS (tipografías y paleta)
 ```
 
 ---

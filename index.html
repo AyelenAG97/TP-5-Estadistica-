@@ -10,42 +10,71 @@
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     </head>
     <body>
-        <header>
-            <h1>Relación entre variables</h1>
-            <p>Estadística y Probabilidades — TP Nro 5</p>
+        <header class="encabezado">
+            <div class="encabezado-texto">
+                <p class="materia">Estadística y Probabilidades, TP Nro 5</p>
+                <h1>¿Qué variables del clima se mueven juntas?</h1>
+                <p class="bajada">
+                    Diez mediciones de presión, temperatura, humedad y viento. Para cada par
+                    calculamos el coeficiente de correlación de Pearson y lo graficamos dividido en
+                    cuadrantes.
+                </p>
+            </div>
+            <button id="btnCargar" class="boton">Recargar datos</button>
         </header>
 
         <main>
-            <!-- Botón para volver a consultar la API -->
-            <section class="controls">
-                <span>Coeficiente de correlación de Pearson entre variables meteorológicas</span>
-                <button id="btnCargar">Recargar datos</button>
-            </section>
-
             <!-- Alertas de texto generadas por main.js (carga / errores) -->
             <section id="alertas" class="alertas" aria-live="polite"></section>
+
+            <!-- Gráfico de barras divergente con el r de los 6 pares (lo genera main.js) -->
+            <section class="espectro-seccion" aria-labelledby="titulo-espectro">
+                <h2 id="titulo-espectro">Los seis pares, de −1 a +1</h2>
+                <div class="espectro-escala" aria-hidden="true">
+                    <span>−1</span>
+                    <span>0</span>
+                    <span>+1</span>
+                </div>
+                <ol id="espectro" class="espectro"></ol>
+            </section>
 
             <!-- Conclusión: par con la mayor correlación -->
             <section id="conclusion" class="conclusion" hidden></section>
 
-            <!-- Una card por cada par de variables (las genera main.js) -->
-            <section id="cards" class="cards"></section>
+            <!-- Cómo leer los cuadrantes -->
+            <section class="guia">
+                <h2>Cómo leer los cuadrantes</h2>
+                <p>
+                    Las líneas punteadas marcan el promedio de cada variable (<span class="media">x</span> e
+                    <span class="media">y</span>) y dividen el gráfico en cuatro. La línea continua es la
+                    recta de regresión. Los puntos en los cuadrantes
+                    <span class="marca marca-pos">I y III</span> están del mismo lado de ambos
+                    promedios y empujan <em>r</em> hacia +1. Los puntos en los cuadrantes
+                    <span class="marca marca-neg">II y IV</span> están de lados opuestos y lo empujan
+                    hacia −1.
+                </p>
+            </section>
+
+            <!-- Un panel por cada par de variables (los genera main.js) -->
+            <section id="cards" class="paneles"></section>
 
             <!-- Tabla con los datos crudos que devolvió la API -->
             <section class="datos">
                 <h2>Datos obtenidos de la API</h2>
-                <table id="tablaDatos">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Presión (hPa)</th>
-                            <th>Temperatura (°C)</th>
-                            <th>Humedad (%)</th>
-                            <th>Viento (km/h)</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                <div class="tabla-scroll">
+                    <table id="tablaDatos">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Presión (hPa)</th>
+                                <th>Temperatura (°C)</th>
+                                <th>Humedad (%)</th>
+                                <th>Viento (km/h)</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </section>
         </main>
         <footer class="footer">

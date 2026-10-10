@@ -1,7 +1,22 @@
-@import url("https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Roboto:wght@400;500;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap");
 
 :root {
-    /* sans-serif sin comillas: es la familia genérica de respaldo */
-    --font-primary: "Roboto", sans-serif;
-    --font-secondary: "Lato", sans-serif;
+    /* Tipografías: Bricolage Grotesque para títulos, Instrument Sans para el texto */
+    --font-primary: "Instrument Sans", sans-serif;
+    --font-secondary: "Bricolage Grotesque", sans-serif;
+
+    /* Paleta "cielo nublado" */
+    --cielo: #e3eaf0; /* fondo de la página */
+    --papel: #f7fafc; /* fondo de los paneles */
+    --tinta: #1f2a44; /* texto principal (azul noche) */
+    --tinta-suave: #52607a; /* texto secundario */
+    --borde: #c5d2dc; /* bordes y líneas finas */
+
+    /* Colores con significado estadístico */
+    --positivo: #1f7a8c; /* cuadrantes I y III, correlación positiva */
+    --positivo-fondo: #d5eaee;
+    --negativo: #9c3d6b; /* cuadrantes II y IV, correlación negativa */
+    --negativo-fondo: #f1dde7;
+    --error: #a3271f;
+    --error-fondo: #f8dedb;
 }

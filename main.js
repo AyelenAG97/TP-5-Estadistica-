@@ -1,20 +1,3 @@
-/*
- * TP5 - Estadística y Probabilidades - Relación entre variables
- * --------------------------------------------------------------
- * Este script:
- *   1. Consulta la API con fetch (GET) y obtiene 10 registros con
- *      presión, temperatura, humedad y velocidad del viento.
- *   2. Calcula el coeficiente de correlación de Pearson (r) para los
- *      6 pares posibles de variables.
- *   3. Dibuja un gráfico de barras divergente (de −1 a +1) con el r de
- *      los 6 pares, para compararlos de un vistazo.
- *   4. Crea un panel por par con el valor de r, un gráfico de dispersión
- *      (Chart.js) dividido en cuadrantes por los promedios x̄ e ȳ, la recta
- *      de regresión, el conteo de puntos por cuadrante y una descripción.
- *   5. Determina qué par tiene la mayor correlación (en valor absoluto)
- *      y lo muestra como conclusión.
- *   6. Llena una tabla con los datos crudos de la API.
- */
 
 const API_URL = "https://apidemo.geoeducacion.com.ar/api/testing/pearson/1";
 
@@ -26,7 +9,7 @@ const VARIABLES = {
     viento: { nombre: "Velocidad del viento", unidad: "km/h" },
 };
 
-// Los 6 pares que pide la consigna, en el mismo orden
+
 const PARES = [
     ["presion", "temperatura"],
     ["presion", "humedad"],
@@ -36,10 +19,7 @@ const PARES = [
     ["humedad", "viento"],
 ];
 
-/*
- * Interpretación física de cada par, según el signo de r.
- * Se usa en la descripción de cada panel y en la conclusión.
- */
+
 const INTERPRETACIONES = {
     "presion-temperatura": {
         positiva: "los días con mayor presión atmosférica tienden a ser más cálidos, algo típico de situaciones de alta presión con cielo despejado y más radiación solar.",
@@ -67,11 +47,6 @@ const INTERPRETACIONES = {
     },
 };
 
-/*
- * Colores del gráfico. Son los mismos que define variable.css:
- * verde azulado = cuadrantes I y III (aporte positivo a r),
- * ciruela = cuadrantes II y IV (aporte negativo a r).
- */
 const COLORES = {
     tinta: "#1f2a44",
     tintaSuave: "#52607a",
@@ -82,33 +57,19 @@ const COLORES = {
     negativoFondo: "rgba(156, 61, 107, 0.10)",
 };
 
-// Tipografía y color por defecto de todos los gráficos
+
 Chart.defaults.font.family = '"Instrument Sans", sans-serif';
 Chart.defaults.color = COLORES.tintaSuave;
 
-// Si el usuario pidió reducir el movimiento, los gráficos aparecen sin animación
 const sinAnimacion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-// Guarda las instancias de los gráficos para destruirlas al recargar
-let graficos = [];
 
-// ---------------------------------------------------------------------------
-// Eventos
-// ---------------------------------------------------------------------------
+let graficos = [];
 
 document.getElementById("btnCargar").addEventListener("click", cargarDatos);
 document.addEventListener("DOMContentLoaded", cargarDatos);
 
-// ---------------------------------------------------------------------------
-// Consumo de la API
-// ---------------------------------------------------------------------------
 
-/**
- * Pide los datos a la API y dispara los cálculos y el dibujo.
- * Mientras espera la respuesta se desactiva el botón, así un doble clic
- * no lanza dos pedidos a la vez (cada uno dibujaría sus propios paneles
- * y quedarían duplicados).
- */
 async function cargarDatos() {
     const boton = document.getElementById("btnCargar");
     if (boton.disabled) return; // ya hay un pedido en curso
@@ -156,26 +117,13 @@ async function cargarDatos() {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Cálculos estadísticos
-// ---------------------------------------------------------------------------
 
-/** Promedio (media aritmética) de un array de números. */
+// Cálculos estadísticos
+
 function media(datos) {
     return datos.reduce((suma, v) => suma + v, 0) / datos.length;
 }
 
-/**
- * Coeficiente de correlación de Pearson:
- *
- *              Σ (xi - x̄)(yi - ȳ)
- *   r = ---------------------------------
- *        √( Σ (xi - x̄)² · Σ (yi - ȳ)² )
- *
- * El numerador es la covarianza (sin dividir por n) y el denominador el
- * producto de las desviaciones (sin dividir por n), por eso las n se cancelan.
- * El resultado siempre está entre -1 y 1.
- */
 function pearson(x, y) {
     const mx = media(x);
     const my = media(y);
@@ -192,20 +140,13 @@ function pearson(x, y) {
         sumaY2 += dy * dy;
     }
 
-    // Si una variable no varía (todos sus valores son iguales) el denominador
-    // es 0 y r no está definido. Se devuelve 0: no hay relación lineal medible.
+    // Si una variable no varía (todos sus valores son iguales) el denominador es 0 y r no está definido. Se devuelve 0: no hay relación lineal medible.
     const denominador = Math.sqrt(sumaX2 * sumaY2);
     if (denominador === 0) return 0;
 
     return sumaXY / denominador;
 }
 
-/**
- * Recta de regresión por mínimos cuadrados: y = a + b·x
- *   b = Σ (xi - x̄)(yi - ȳ) / Σ (xi - x̄)²
- *   a = ȳ - b·x̄
- * Se dibuja en el gráfico para ver la tendencia que mide r.
- */
 function regresion(x, y) {
     const mx = media(x);
     const my = media(y);
@@ -220,21 +161,7 @@ function regresion(x, y) {
     return { a, b };
 }
 
-/**
- * Cuadrantes: las rectas x = x̄ e y = ȳ dividen el gráfico en cuatro.
- *
- *          II  |  I          I:   x > x̄  e  y > ȳ   → (xi − x̄)(yi − ȳ) > 0
- *        ------+------       II:  x < x̄  e  y > ȳ   → producto < 0
- *          III |  IV         III: x < x̄  e  y < ȳ   → producto > 0
- *                            IV:  x > x̄  e  y < ȳ   → producto < 0
- *
- * El numerador de Pearson es la suma de esos productos. Por eso, si la
- * mayoría de los puntos (y los más alejados) caen en I y III, r es positivo;
- * si caen en II y IV, r es negativo; y si se reparten parejo, r queda cerca de 0.
- *
- * Devuelve el promedio de cada variable, el cuadrante de cada punto, cuántos
- * puntos hay en cada cuadrante y cuánto suman los productos positivos y negativos.
- */
+
 function cuadrantes(x, y) {
     const mx = media(x);
     const my = media(y);
@@ -264,10 +191,6 @@ function cuadrantes(x, y) {
     return { mx, my, porPunto, conteo, sumaPositiva, sumaNegativa };
 }
 
-/**
- * Clasifica la fuerza de la correlación según el valor absoluto de r.
- * Devuelve el texto de la fuerza (y una clase con el mismo criterio).
- */
 function clasificar(r) {
     const abs = Math.abs(r);
     if (abs >= 0.9) return { fuerza: "muy fuerte", clase: "fuerte" };
@@ -310,18 +233,6 @@ function signo(r) {
     return r >= 0 ? "positiva" : "negativa";
 }
 
-// ---------------------------------------------------------------------------
-// Plugin de Chart.js: división en cuadrantes
-// ---------------------------------------------------------------------------
-
-/*
- * Chart.js permite agregar "plugins" que dibujan sobre el canvas en distintos
- * momentos. Este dibuja, ANTES que los puntos (beforeDatasetsDraw):
- *   1. el fondo de cada cuadrante (I y III verde azulado, II y IV ciruela);
- *   2. las líneas punteadas de x̄ e ȳ que forman la división;
- *   3. el número romano de cada cuadrante en su esquina.
- * Los promedios le llegan por options.plugins.cuadrantes = { mediaX, mediaY }.
- */
 const pluginCuadrantes = {
     id: "cuadrantes",
     beforeDatasetsDraw(chart, args, opciones) {
@@ -334,7 +245,7 @@ const pluginCuadrantes = {
 
         ctx.save();
 
-        // 1. Fondos. En el canvas la Y crece hacia abajo: "top" es el borde superior.
+
         ctx.fillStyle = COLORES.positivoFondo;
         ctx.fillRect(px, top, right - px, py - top); // I   (arriba a la derecha)
         ctx.fillRect(left, py, px - left, bottom - py); // III (abajo a la izquierda)
@@ -342,7 +253,6 @@ const pluginCuadrantes = {
         ctx.fillRect(left, top, px - left, py - top); // II  (arriba a la izquierda)
         ctx.fillRect(px, py, right - px, bottom - py); // IV  (abajo a la derecha)
 
-        // 2. Líneas de los promedios
         ctx.strokeStyle = COLORES.tinta;
         ctx.lineWidth = 1.25;
         ctx.setLineDash([5, 4]);
@@ -379,10 +289,7 @@ const pluginCuadrantes = {
     },
 };
 
-/**
- * Escribe "x̄" o "ȳ" en el canvas: la letra y una rayita encima.
- * Se dibuja a mano porque muchas fuentes no traen el carácter combinado.
- */
+
 function promedioConBarra(ctx, letra, x, y, alineacion) {
     ctx.textAlign = alineacion;
     ctx.fillText(letra, x, y);
@@ -391,19 +298,7 @@ function promedioConBarra(ctx, letra, x, y, alineacion) {
     ctx.fillRect(inicio, y - 11, ancho, 1.25);
 }
 
-// ---------------------------------------------------------------------------
-// Salida en pantalla (DOM)
-// ---------------------------------------------------------------------------
 
-/**
- * Gráfico de barras divergente con el r de los 6 pares.
- * Cada fila tiene una pista que va de −1 (izquierda) a +1 (derecha) con el 0
- * en el centro. La barra arranca en el 0 y llega hasta r:
- *   - posición del 0 en la pista: 50 %
- *   - largo de la barra: |r| · 50 %
- *   - si r > 0 la barra empieza en 50 %; si r < 0 empieza en 50 % − largo.
- * Las filas se ordenan de mayor a menor r y cada una enlaza a su panel.
- */
 function dibujarEspectro(resultados) {
     const lista = document.getElementById("espectro");
     lista.innerHTML = "";
@@ -435,11 +330,7 @@ function formatoR(r) {
     return (r >= 0 ? "+" : "−") + texto;
 }
 
-/**
- * Crea el panel de un par: gráfico a la izquierda y, a la derecha, el valor
- * de r, el conteo de puntos por cuadrante, el aporte de cada grupo de
- * cuadrantes al numerador de Pearson y la descripción.
- */
+/** Crea el panel de un par */
 function crearCard(resultado) {
     const { varX, varY, x, y, r } = resultado;
     const { fuerza } = clasificar(r);
@@ -541,7 +432,7 @@ function dibujarDispersion(canvas, x, y, infoX, infoY, cuad) {
             animation: sinAnimacion ? false : { duration: 500 },
             plugins: {
                 cuadrantes: { mediaX: cuad.mx, mediaY: cuad.my },
-                // Sin leyenda: los colores se explican en "Cómo leer los cuadrantes"
+
                 legend: { display: false },
                 tooltip: {
                     backgroundColor: COLORES.tinta,
@@ -590,10 +481,6 @@ function mostrarConclusion(resultados) {
         <p>
             Es una correlación ${signo(mayor.r)} ${fuerza} (r = ${formatoR(mayor.r)}).
             Esto implica que ${INTERPRETACIONES[`${mayor.varX}-${mayor.varY}`][signo(mayor.r)]}
-        </p>
-        <p>
-            La muestra es chica (${mayor.x.length} mediciones) y correlación no implica causalidad:
-            ambas variables pueden depender de un tercer factor, como el sistema de presión dominante.
         </p>
     `;
     cont.hidden = false;

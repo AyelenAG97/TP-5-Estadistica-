@@ -14,11 +14,6 @@
             <div class="encabezado-texto">
                 <p class="materia">Estadística y Probabilidades, TP Nro 5</p>
                 <h1>¿Qué variables del clima se mueven juntas?</h1>
-                <p class="bajada">
-                    Diez mediciones de presión, temperatura, humedad y viento. Para cada par
-                    calculamos el coeficiente de correlación de Pearson y lo graficamos dividido en
-                    cuadrantes.
-                </p>
             </div>
             <button id="btnCargar" class="boton">Recargar datos</button>
         </header>
@@ -41,19 +36,6 @@
             <!-- Conclusión: par con la mayor correlación -->
             <section id="conclusion" class="conclusion" hidden></section>
 
-            <!-- Cómo leer los cuadrantes -->
-            <section class="guia">
-                <h2>Cómo leer los cuadrantes</h2>
-                <p>
-                    Las líneas punteadas marcan el promedio de cada variable (<span class="media">x</span> e
-                    <span class="media">y</span>) y dividen el gráfico en cuatro. La línea continua es la
-                    recta de regresión. Los puntos en los cuadrantes
-                    <span class="marca marca-pos">I y III</span> están del mismo lado de ambos
-                    promedios y empujan <em>r</em> hacia +1. Los puntos en los cuadrantes
-                    <span class="marca marca-neg">II y IV</span> están de lados opuestos y lo empujan
-                    hacia −1.
-                </p>
-            </section>
 
             <!-- Un panel por cada par de variables (los genera main.js) -->
             <section id="cards" class="paneles"></section>
@@ -78,7 +60,7 @@
             </section>
         </main>
         <footer class="footer">
-            <p>© 2026 by Matias Rosa, Camila Larsen, Ayelen Aguero & Matias Nerli</p>
+            <p>© 2026 by Matias Rosa, Camila Larsen, Matias Nerli & Ayelen Aguero Garcia</p>
         </footer>
 
         <script src="main.js"></script>
